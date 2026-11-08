@@ -22,6 +22,11 @@ MAX_SCAN_INTERVAL = 3600
 POLL_RETRIES = 3
 POLL_RETRY_DELAY = 1.5  # seconds between attempts
 
+# Keep serving the last known values when polls fail (the device often drops its
+# single local connection for minutes, e.g. while the app streams). Only mark the
+# entities unavailable once readings are this stale, so history has no gaps.
+MAX_STALE_SECONDS = 1800
+
 # Tuya datapoint (DP) ids for the See Pro Baby Monitor, from its schema.
 DP_TEMPERATURE = "142"
 DP_HUMIDITY = "143"

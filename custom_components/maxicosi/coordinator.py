@@ -20,6 +20,7 @@ from .const import (
     CONF_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    MAX_STALE_SECONDS,
     POLL_RETRIES,
     POLL_RETRY_DELAY,
 )
@@ -42,6 +43,8 @@ class MaxiCosiCoordinator(DataUpdateCoordinator[dict[str, object]]):
         )
         self._entry = entry
         self._device: tinytuya.Device | None = None
+        self._dps: dict[str, object] = {}  # accumulated datapoints
+        self._last_ok: float = 0.0
 
     def _build_device(self) -> tinytuya.Device:
         data = self._entry.data
@@ -82,9 +85,17 @@ class MaxiCosiCoordinator(DataUpdateCoordinator[dict[str, object]]):
 
     async def _async_update_data(self) -> dict[str, object]:
         try:
-            return await self.hass.async_add_executor_job(self._poll)
-        except UpdateFailed:
-            raise
-        except Exception as err:  # tinytuya raises bare exceptions
+            dps = await self.hass.async_add_executor_job(self._poll)
+        except Exception as err:  # UpdateFailed or bare tinytuya errors
             self._device = None
+            stale = time.monotonic() - self._last_ok
+            if self._dps and stale < MAX_STALE_SECONDS:
+                _LOGGER.debug(
+                    "Poll failed (%s); serving last values (stale %.0fs)", err, stale
+                )
+                return dict(self._dps)
             raise UpdateFailed(f"Error polling Maxi-Cosi monitor: {err}") from err
+        # Merge: a partial status update must not drop temperature/humidity.
+        self._dps.update(dps)
+        self._last_ok = time.monotonic()
+        return dict(self._dps)

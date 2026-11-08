@@ -174,6 +174,27 @@ class Tuya:
             "options": json.dumps({"group": 1, "mfaCode": "null"}),
         })
 
+    def get_device(self, dev_id):
+        return self.call("tuya.m.device.get", "1.0", {"devId": dev_id})
+
+    def set_dp(self, dev_id, dps):
+        dps_str = json.dumps(dps)
+        attempts = [
+            ("tuya.m.device.dp.publish", "2.0", {"devId": dev_id, "gwId": dev_id, "dps": dps_str}),
+            ("tuya.m.device.dp.publish", "2.0", {"devId": dev_id, "dps": dps_str}),
+            ("tuya.m.device.dp.publish", "1.0", {"devId": dev_id, "gwId": dev_id, "dps": dps_str}),
+            ("tuya.m.device.dp.publish", "2.0", {"devId": dev_id, "gwId": dev_id, "dps": dps}),
+            ("m.smart.device.dp.publish", "1.0", {"devId": dev_id, "gwId": dev_id, "dps": dps_str}),
+        ]
+        for a, v, p in attempts:
+            try:
+                r = self.call(a, v, p)
+                print(f"   set_dp OK via {a} v{v} (dps={'str' if isinstance(p['dps'],str) else 'obj'})")
+                return r
+            except RuntimeError as e:
+                print(f"   set_dp fail {a} v{v}: {e}")
+        raise RuntimeError("all dp.publish variants failed")
+
     def devices(self):
         homes = self.call("m.life.home.space.list") or []
         print("     homes:", json.dumps(homes)[:600])
@@ -222,6 +243,36 @@ def main():
         print(f"  - {d.get('name') or d.get('deviceName')}: "
               f"devId={d.get('devId') or d.get('deviceId')} "
               f"localKey={d.get('localKey')} ip={d.get('ip','?')}")
+
+    if os.environ.get("ONVIF_ENABLE"):
+        mon = next((d for d in seen.values()
+                    if "onitor" in (d.get("name") or d.get("deviceName") or "")), None)
+        if not mon:
+            print("\nNo monitor device found for ONVIF."); return
+        mid = mon.get("devId") or mon.get("deviceId")
+        print(f"\n=== ONVIF setup for {mon.get('name')} ({mid}) ===")
+        dev = t.get_device(mid)
+        dps = dev.get("dps", {}) if isinstance(dev, dict) else {}
+        print("current ONVIF dps 253/254/255:",
+              {k: dps.get(k) for k in ("253", "254", "255")})
+        # control test: toggle a known-good DP via the same cloud path
+        osd = dps.get("104")
+        print(f"\ncontrol test: cloud-set DP104 (basic_osd) {osd} -> {not osd}")
+        t.set_dp(mid, {"104": (not osd) if isinstance(osd, bool) else True})
+        time.sleep(6)
+        osd2 = (t.get_device(mid) or {}).get("dps", {}).get("104")
+        print(f"   DP104 now {osd2}  -> cloud writes {'REACH device' if osd2 != osd else 'do NOT reach device'}")
+        if isinstance(osd, bool):
+            t.set_dp(mid, {"104": osd})  # restore
+
+        pwd = os.environ.get("ONVIF_PASS", "MaxiCosi123!")
+        print(f"\nenabling ONVIF via cloud (253=<pwd>, 255=True)...")
+        t.set_dp(mid, {"253": pwd, "255": True})
+        time.sleep(10)
+        dps = (t.get_device(mid) or {}).get("dps", {})
+        print("after enable 253/254/255:",
+              {k: dps.get(k) for k in ("253", "254", "255")})
+        print("  ONVIF password:", pwd)
 
 
 if __name__ == "__main__":
