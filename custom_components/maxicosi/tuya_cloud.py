@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import logging
 import time
 import uuid
 from typing import Any
@@ -33,6 +34,8 @@ SIGNING_KEY = f"{_PKG}_{_CERT}_{_EMBEDDED}_{_APP_SECRET}"
 API_HOST = "https://a1.tuyaeu.com/api.json"  # Maxi-Cosi app uses the EU datacentre
 APP_VERSION = "3.0.5"
 SDK_VERSION = "6.7.0"
+
+_LOGGER = logging.getLogger(__name__)
 
 _SIGN_WHITELIST = frozenset(
     [
@@ -90,6 +93,10 @@ class TuyaCloud:
         ) as resp:
             data = await resp.json(content_type=None)
         if not data.get("success"):
+            _LOGGER.debug(
+                "Tuya %s failed: %s %s",
+                action, data.get("errorCode"), data.get("errorMsg"),
+            )
             raise TuyaCloudError(data.get("errorCode", "UNKNOWN"), data.get("errorMsg", ""))
         return data.get("result")
 
@@ -172,5 +179,9 @@ class TuyaCloud:
         ) as resp:
             data = await resp.json(content_type=None)
         if not data.get("success"):
+            _LOGGER.debug(
+                "Tuya %s failed: %s %s",
+                action, data.get("errorCode"), data.get("errorMsg"),
+            )
             raise TuyaCloudError(data.get("errorCode", "UNKNOWN"), data.get("errorMsg", ""))
         return data.get("result")

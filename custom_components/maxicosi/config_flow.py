@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import tinytuya
@@ -15,13 +16,21 @@ from homeassistant.config_entries import (
 )
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.selector import (
+    SelectOptionDict,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
 from .const import (
+    CALLING_CODES,
     CONF_DEVICE_ID,
     CONF_HOST,
     CONF_LOCAL_KEY,
     CONF_PROTOCOL_VERSION,
     CONF_SCAN_INTERVAL,
+    DEFAULT_COUNTRY_CODE,
     DEFAULT_PROTOCOL_VERSION,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -30,6 +39,20 @@ from .const import (
     PROTOCOL_VERSIONS,
 )
 from .tuya_cloud import TuyaCloud, TuyaCloudError
+
+_LOGGER = logging.getLogger(__name__)
+
+_COUNTRY_SELECTOR = SelectSelector(
+    SelectSelectorConfig(
+        options=[
+            SelectOptionDict(value=code, label=f"{name} (+{code})")
+            for code, name in CALLING_CODES
+        ],
+        mode=SelectSelectorMode.DROPDOWN,
+        custom_value=True,
+        sort=True,
+    )
+)
 
 STEP_MANUAL_SCHEMA = vol.Schema(
     {
@@ -125,14 +148,16 @@ class MaxiCosiConfigFlow(ConfigFlow, domain=DOMAIN):
             try:
                 await self._cloud.login(self._email, self._password)
             except TuyaCloudError as err:
+                _LOGGER.warning("Maxi-Cosi cloud login error: %s", err)
                 if "MFA" in err.code.upper():
                     try:
                         await self._cloud.send_mfa(self._email, self._password)
-                    except TuyaCloudError:
-                        pass
+                    except TuyaCloudError as send_err:
+                        _LOGGER.warning("Maxi-Cosi MFA send error: %s", send_err)
                     return await self.async_step_mfa()
                 errors["base"] = "invalid_auth"
             except Exception:  # noqa: BLE001
+                _LOGGER.exception("Maxi-Cosi cloud login failed")
                 errors["base"] = "cannot_connect"
             else:
                 return await self.async_step_select()
@@ -141,7 +166,9 @@ class MaxiCosiConfigFlow(ConfigFlow, domain=DOMAIN):
             {
                 vol.Required("email"): str,
                 vol.Required("password"): str,
-                vol.Required("country_code", default="32"): str,
+                vol.Required(
+                    "country_code", default=DEFAULT_COUNTRY_CODE
+                ): _COUNTRY_SELECTOR,
             }
         )
         return self.async_show_form(step_id="cloud", data_schema=schema, errors=errors)
@@ -155,9 +182,11 @@ class MaxiCosiConfigFlow(ConfigFlow, domain=DOMAIN):
                 await self._cloud.login(
                     self._email, self._password, user_input["code"]
                 )
-            except TuyaCloudError:
+            except TuyaCloudError as err:
+                _LOGGER.warning("Maxi-Cosi MFA login error: %s", err)
                 errors["base"] = "invalid_auth"
             except Exception:  # noqa: BLE001
+                _LOGGER.exception("Maxi-Cosi MFA login failed")
                 errors["base"] = "cannot_connect"
             else:
                 return await self.async_step_select()
