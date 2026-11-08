@@ -1,0 +1,12 @@
+{
+  "domain": "maxicosi",
+  "name": "Maxi-Cosi Baby Monitor",
+  "codeowners": ["@nicolaivds"],
+  "config_flow": true,
+  "documentation": "https://github.com/nicolaivds/maxicosi",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/nicolaivds/maxicosi/issues",
+  "requirements": ["tinytuya>=1.13.0"],
+  "version": "1.0.0"
+}

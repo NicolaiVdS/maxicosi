@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Maxi-Cosi Baby Monitor",
+        "description": "Enter the monitor's local Tuya details. The device ID and local key are per-device credentials; see the README for how to obtain them.",
+        "data": {
+          "device_id": "Device ID",
+          "host": "IP address",
+          "local_key": "Local key",
+          "protocol_version": "Protocol version"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect. Check the IP address, local key and protocol version, and that the monitor is on the same network."
+    },
+    "abort": {
+      "already_configured": "This monitor is already configured."
+    }
+  }
+}
