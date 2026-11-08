@@ -3,7 +3,44 @@
     "step": {
       "user": {
         "title": "Maxi-Cosi Baby Monitor",
-        "description": "Enter the monitor's local Tuya details. The device ID and local key are per-device credentials; see the README for how to obtain them.",
+        "menu_options": {
+          "cloud": "Log in with my Maxi-Cosi account (auto-discover)",
+          "manual": "Enter device details manually"
+        }
+      },
+      "cloud": {
+        "title": "Log in",
+        "description": "Use your Maxi-Cosi app account. Credentials are used once to fetch your device(s) and local key; polling afterwards is fully local.",
+        "data": {
+          "email": "Email",
+          "password": "Password",
+          "country_code": "Country calling code (e.g. 32 for Belgium)"
+        }
+      },
+      "mfa": {
+        "title": "Verification code",
+        "description": "Enter the code Maxi-Cosi just emailed you.",
+        "data": {
+          "code": "Code"
+        }
+      },
+      "select": {
+        "title": "Choose your monitor",
+        "data": {
+          "device": "Device"
+        }
+      },
+      "confirm": {
+        "title": "Local connection",
+        "description": "Confirm the local IP for {name}. It was auto-detected if possible; reserve this IP in your router's DHCP so it doesn't change.",
+        "data": {
+          "host": "IP address",
+          "protocol_version": "Protocol version"
+        }
+      },
+      "manual": {
+        "title": "Maxi-Cosi Baby Monitor",
+        "description": "Enter the monitor's local Tuya details. See the README for how to obtain the device ID and local key.",
         "data": {
           "device_id": "Device ID",
           "host": "IP address",
@@ -13,10 +50,12 @@
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect. Check the IP address, local key and protocol version, and that the monitor is on the same network."
+      "cannot_connect": "Failed to connect. Check the details and that the monitor is on the same network.",
+      "invalid_auth": "Login failed. Check your email, password and verification code."
     },
     "abort": {
-      "already_configured": "This monitor is already configured."
+      "already_configured": "This monitor is already configured.",
+      "no_devices": "No devices with a local key were found on this account."
     }
   },
   "options": {
