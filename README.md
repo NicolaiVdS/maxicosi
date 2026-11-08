@@ -35,9 +35,11 @@ Two ways to set it up — pick one when you add the integration:
 
 Choose **"Log in with my Maxi-Cosi account"** and enter your app email,
 password and country calling code (e.g. `32` for Belgium). The integration logs
-in to Tuya exactly like the app, lets you pick your monitor, and fetches the
-device ID and **local key automatically** — then tries to detect its LAN IP.
-Your credentials are used only at setup; all polling afterwards is local.
+in to Tuya exactly like the app — including its encrypted `et=3` transport — lets
+you pick your monitor, and fetches the device ID and **local key automatically**,
+then tries to detect its LAN IP. Your credentials are used only at setup; all
+polling afterwards is local. If your account has email 2FA, you'll be asked for
+the code.
 
 > Login uses the Maxi-Cosi app's signing keys, which live in this repo. If the
 > vendor ever rotates them, login may stop working until the keys are refreshed —

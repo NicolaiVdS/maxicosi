@@ -241,10 +241,10 @@ class MaxiCosiConfigFlow(ConfigFlow, domain=DOMAIN):
         self._abort_if_unique_id_configured()
         errors: dict[str, str] = {}
 
-        suggested_ip = dev.get("ip") or ""
+        suggested_ip = ""  # cloud only knows the WAN IP; find the LAN IP by scanning
         if user_input is None:
             scanned = await self.hass.async_add_executor_job(_scan_for_ip, dev_id)
-            suggested_ip = scanned or suggested_ip
+            suggested_ip = scanned or ""
         else:
             data = {
                 CONF_DEVICE_ID: dev_id,
