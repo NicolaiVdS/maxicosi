@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import timedelta
 
 import tinytuya
@@ -16,8 +17,11 @@ from .const import (
     CONF_HOST,
     CONF_LOCAL_KEY,
     CONF_PROTOCOL_VERSION,
+    CONF_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    POLL_RETRIES,
+    POLL_RETRY_DELAY,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -29,11 +33,12 @@ class MaxiCosiCoordinator(DataUpdateCoordinator[dict[str, object]]):
     """Poll the monitor over the local network and expose its datapoints."""
 
     def __init__(self, hass: HomeAssistant, entry: MaxiCosiConfigEntry) -> None:
+        interval = entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
+            update_interval=timedelta(seconds=interval),
         )
         self._entry = entry
         self._device: tinytuya.Device | None = None
@@ -51,15 +56,29 @@ class MaxiCosiCoordinator(DataUpdateCoordinator[dict[str, object]]):
         return dev
 
     def _poll(self) -> dict[str, object]:
-        """Blocking poll; runs in an executor thread."""
-        if self._device is None:
-            self._device = self._build_device()
-        status = self._device.status()
-        if not isinstance(status, dict) or "dps" not in status:
-            # Drop the socket so the next cycle reconnects cleanly.
+        """Blocking poll with retries; runs in an executor thread.
+
+        The monitor sometimes refuses a local socket while the app is
+        streaming, so retry a few times (reconnecting each time) before giving
+        up, to avoid gaps in history.
+        """
+        last = None
+        for attempt in range(POLL_RETRIES):
+            if self._device is None:
+                self._device = self._build_device()
+            try:
+                status = self._device.status()
+            except Exception as err:  # tinytuya raises bare exceptions
+                last = err
+                status = None
+            if isinstance(status, dict) and "dps" in status:
+                return status["dps"]
+            last = status if status is not None else last
+            # Drop the socket so the next attempt reconnects cleanly.
             self._device = None
-            raise UpdateFailed(f"Unexpected response from device: {status}")
-        return status["dps"]
+            if attempt < POLL_RETRIES - 1:
+                time.sleep(POLL_RETRY_DELAY)
+        raise UpdateFailed(f"No valid response after {POLL_RETRIES} attempts: {last}")
 
     async def _async_update_data(self) -> dict[str, object]:
         try:

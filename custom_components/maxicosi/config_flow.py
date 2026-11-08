@@ -7,15 +7,25 @@ from typing import Any
 import tinytuya
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
+from homeassistant.core import callback
 
 from .const import (
     CONF_DEVICE_ID,
     CONF_HOST,
     CONF_LOCAL_KEY,
     CONF_PROTOCOL_VERSION,
+    CONF_SCAN_INTERVAL,
     DEFAULT_PROTOCOL_VERSION,
+    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    MAX_SCAN_INTERVAL,
+    MIN_SCAN_INTERVAL,
     PROTOCOL_VERSIONS,
 )
 
@@ -75,3 +85,29 @@ class MaxiCosiConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_SCHEMA, errors=errors
         )
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
+        return MaxiCosiOptionsFlow()
+
+
+class MaxiCosiOptionsFlow(OptionsFlow):
+    """Handle options (polling interval)."""
+
+    async def async_step_init(self, user_input=None) -> ConfigFlowResult:
+        if user_input is not None:
+            return self.async_create_entry(data=user_input)
+
+        current = self.config_entry.options.get(
+            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+        )
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_SCAN_INTERVAL, default=current): vol.All(
+                    vol.Coerce(int),
+                    vol.Range(min=MIN_SCAN_INTERVAL, max=MAX_SCAN_INTERVAL),
+                )
+            }
+        )
+        return self.async_show_form(step_id="init", data_schema=schema)
