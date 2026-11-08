@@ -14,12 +14,18 @@ working alongside it.
 > ONVIF/RTSP endpoint (datapoints 254/255) which can be fed to `go2rtc`/HA
 > separately. A future release may add it to this integration.
 
-## Installation (HACS)
+## Installation (Marketplace)
 
-1. HACS → ⋮ → **Custom repositories** → add `https://github.com/nicolaivds/maxicosi`,
-   category **Integration**.
+Home Assistant 2026.11+ has a built-in **Marketplace** (the former HACS).
+
+1. **Settings → Marketplace → ⋮ → Add from link** → enter
+   `https://github.com/NicolaiVdS/maxicosi` (or `NicolaiVdS/maxicosi`).
+   You'll be asked to connect GitHub once (reads public info only).
 2. Install **Maxi-Cosi Baby Monitor**, then restart Home Assistant.
 3. **Settings → Devices & Services → Add Integration → Maxi-Cosi**.
+
+> On older setups still running standalone HACS, add the same URL as a
+> *custom repository* (category: Integration) instead.
 
 ## Configuration
 
